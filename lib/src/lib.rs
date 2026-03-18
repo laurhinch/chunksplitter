@@ -66,5 +66,7 @@ pub fn verify_round_trip(
         anyhow::ensure!(orig_val == reco_val, "Value mismatch for key {key:?}");
     }
 
-    Ok(RoundTripReport { pairs_checked: orig_map.len() })
+    Ok(RoundTripReport {
+        pairs_checked: orig_map.len(),
+    })
 }

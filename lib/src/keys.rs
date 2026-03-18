@@ -44,7 +44,8 @@ impl BedrockKey {
         // Keys like `actorprefix<binary_id>` have a non-printable suffix and must
         // be treated as Binary so we can reconstruct them exactly.
         if let Ok(s) = std::str::from_utf8(key)
-            && s.bytes().all(|b| (0x20..0x7F).contains(&b)) {
+            && s.bytes().all(|b| (0x20..0x7F).contains(&b))
+        {
             return BedrockKey::Named(s.to_owned());
         }
         BedrockKey::Binary(key.to_vec())
@@ -52,7 +53,13 @@ impl BedrockKey {
 
     pub fn to_raw_bytes(&self) -> Vec<u8> {
         match self {
-            BedrockKey::Chunk { x, z, dim, tag, subchunk } => {
+            BedrockKey::Chunk {
+                x,
+                z,
+                dim,
+                tag,
+                subchunk,
+            } => {
                 let mut out = Vec::with_capacity(14);
                 out.extend_from_slice(&x.to_le_bytes());
                 out.extend_from_slice(&z.to_le_bytes());
@@ -94,12 +101,20 @@ fn parse_chunk_key(key: &[u8]) -> Option<BedrockKey> {
             return None;
         }
         let subchunk = if len == 10 {
-            if tag != 47 { return None; }
+            if tag != 47 {
+                return None;
+            }
             Some(key[9] as i8)
         } else {
             None
         };
-        return Some(BedrockKey::Chunk { x, z, dim: 0, tag, subchunk });
+        return Some(BedrockKey::Chunk {
+            x,
+            z,
+            dim: 0,
+            tag,
+            subchunk,
+        });
     }
 
     // Non-overworld: 13 bytes (no subchunk) or 14 bytes (with subchunk)
@@ -112,12 +127,20 @@ fn parse_chunk_key(key: &[u8]) -> Option<BedrockKey> {
             return None;
         }
         let subchunk = if len == 14 {
-            if tag != 47 { return None; }
+            if tag != 47 {
+                return None;
+            }
             Some(key[13] as i8)
         } else {
             None
         };
-        return Some(BedrockKey::Chunk { x, z, dim, tag, subchunk });
+        return Some(BedrockKey::Chunk {
+            x,
+            z,
+            dim,
+            tag,
+            subchunk,
+        });
     }
 
     None
@@ -179,4 +202,3 @@ pub fn tag_name(tag: u8) -> &'static str {
         _ => "unknown",
     }
 }
-

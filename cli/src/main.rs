@@ -50,7 +50,11 @@ struct Renderer {
 
 impl Renderer {
     fn new() -> Self {
-        Self { bar: None, phase: "", start: Instant::now() }
+        Self {
+            bar: None,
+            phase: "",
+            start: Instant::now(),
+        }
     }
 
     fn on_event(&mut self, event: ProgressEvent) {
@@ -105,12 +109,10 @@ fn spinner_style() -> ProgressStyle {
 }
 
 fn bar_style() -> ProgressStyle {
-    ProgressStyle::with_template(
-        "  {spinner:.cyan} {msg:<28} [{bar:38.cyan/blue}] {pos}/{len}",
-    )
-    .unwrap()
-    .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", ""])
-    .progress_chars("=> ")
+    ProgressStyle::with_template("  {spinner:.cyan} {msg:<28} [{bar:38.cyan/blue}] {pos}/{len}")
+        .unwrap()
+        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", ""])
+        .progress_chars("=> ")
 }
 
 fn done_style() -> ProgressStyle {
@@ -144,7 +146,11 @@ fn main() -> Result<()> {
             match verify_round_trip(&world, &mut |e| r.on_event(e)) {
                 Ok(report) => {
                     let elapsed = r.finish();
-                    eprintln!("\nPASS: {} key-value pairs verified in {:.2}s", report.pairs_checked, elapsed.as_secs_f64());
+                    eprintln!(
+                        "\nPASS: {} key-value pairs verified in {:.2}s",
+                        report.pairs_checked,
+                        elapsed.as_secs_f64()
+                    );
                 }
                 Err(e) => {
                     r.finish();

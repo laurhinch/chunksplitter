@@ -18,7 +18,11 @@ fn round_trip_all_worlds() {
         .expect("read test_worlds/")
         .filter_map(|e| {
             let path = e.ok()?.path();
-            if path.is_dir() && path.join("db").exists() { Some(path) } else { None }
+            if path.is_dir() && path.join("db").exists() {
+                Some(path)
+            } else {
+                None
+            }
         })
         .collect();
 

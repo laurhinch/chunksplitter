@@ -13,8 +13,8 @@
 ///   {"list": {"of": "type_name", "v": [...]}}
 use std::io::{Cursor, Read};
 
-use anyhow::{anyhow, bail, Result};
-use base64::{engine::general_purpose::STANDARD as B64, Engine};
+use anyhow::{Result, anyhow, bail};
+use base64::{Engine, engine::general_purpose::STANDARD as B64};
 use serde_json::{Map, Value};
 
 const HEADER_LEN: usize = 8;
@@ -38,13 +38,18 @@ pub fn level_dat_to_json(data: &[u8]) -> Result<Value> {
     let fields = read_compound_payload(&mut cur)?;
 
     let mut root = Map::new();
-    root.insert("_storage_version".into(), Value::Number(storage_version.into()));
+    root.insert(
+        "_storage_version".into(),
+        Value::Number(storage_version.into()),
+    );
     root.insert("_root".into(), Value::Object(fields));
     Ok(Value::Object(root))
 }
 
 pub fn json_to_level_dat(json: &Value) -> Result<Vec<u8>> {
-    let obj = json.as_object().ok_or_else(|| anyhow!("Expected JSON object"))?;
+    let obj = json
+        .as_object()
+        .ok_or_else(|| anyhow!("Expected JSON object"))?;
 
     let storage_version = obj
         .get("_storage_version")
@@ -146,7 +151,9 @@ fn read_payload(c: &mut Cursor<&[u8]>, tag_type: u8) -> Result<Value> {
         }
         7 => {
             let len = read_le_i32(c)?;
-            if len < 0 { bail!("Negative byte array length"); }
+            if len < 0 {
+                bail!("Negative byte array length");
+            }
             let mut buf = vec![0u8; len as usize];
             c.read_exact(&mut buf)?;
             tagged("byte_array", Value::String(B64.encode(&buf)))
@@ -155,7 +162,9 @@ fn read_payload(c: &mut Cursor<&[u8]>, tag_type: u8) -> Result<Value> {
         9 => {
             let elem_type = read_u8(c)?;
             let count = read_le_i32(c)?;
-            if count < 0 { bail!("Negative list length"); }
+            if count < 0 {
+                bail!("Negative list length");
+            }
             let mut items = Vec::with_capacity(count as usize);
             for _ in 0..count {
                 items.push(read_payload(c, elem_type)?);
@@ -168,13 +177,17 @@ fn read_payload(c: &mut Cursor<&[u8]>, tag_type: u8) -> Result<Value> {
         10 => tagged("compound", Value::Object(read_compound_payload(c)?)),
         11 => {
             let len = read_le_i32(c)?;
-            if len < 0 { bail!("Negative int_array length"); }
+            if len < 0 {
+                bail!("Negative int_array length");
+            }
             let items: Result<Vec<Value>> = (0..len).map(|_| Ok(read_le_i32(c)?.into())).collect();
             tagged("int_array", Value::Array(items?))
         }
         12 => {
             let len = read_le_i32(c)?;
-            if len < 0 { bail!("Negative long_array length"); }
+            if len < 0 {
+                bail!("Negative long_array length");
+            }
             let items: Result<Vec<Value>> = (0..len).map(|_| Ok(read_le_i64(c)?.into())).collect();
             tagged("long_array", Value::Array(items?))
         }
@@ -200,7 +213,7 @@ fn read_compound_payload(c: &mut Cursor<&[u8]>) -> Result<Map<String, Value>> {
 
 fn tag_type_name(tag: u8) -> &'static str {
     match tag {
-        0 => "end",   // TAG_End as list element type = empty list
+        0 => "end", // TAG_End as list element type = empty list
         1 => "byte",
         2 => "short",
         3 => "int",
@@ -268,7 +281,9 @@ fn write_string(out: &mut Vec<u8>, s: &str) {
 
 /// Write a tagged payload given its type-tagged JSON value.
 fn write_tagged_value(out: &mut Vec<u8>, val: &Value) -> Result<()> {
-    let obj = val.as_object().ok_or_else(|| anyhow!("Expected tagged NBT object, got {val}"))?;
+    let obj = val
+        .as_object()
+        .ok_or_else(|| anyhow!("Expected tagged NBT object, got {val}"))?;
     let (type_name, inner) = obj
         .iter()
         .next()
@@ -276,43 +291,61 @@ fn write_tagged_value(out: &mut Vec<u8>, val: &Value) -> Result<()> {
 
     match type_name.as_str() {
         "byte" => {
-            let n = inner.as_i64().ok_or_else(|| anyhow!("byte must be integer"))? as i8;
+            let n = inner
+                .as_i64()
+                .ok_or_else(|| anyhow!("byte must be integer"))? as i8;
             write_u8(out, n as u8);
         }
         "short" => {
-            let n = inner.as_i64().ok_or_else(|| anyhow!("short must be integer"))? as i16;
+            let n = inner
+                .as_i64()
+                .ok_or_else(|| anyhow!("short must be integer"))? as i16;
             write_le_i16(out, n);
         }
         "int" => {
-            let n = inner.as_i64().ok_or_else(|| anyhow!("int must be integer"))? as i32;
+            let n = inner
+                .as_i64()
+                .ok_or_else(|| anyhow!("int must be integer"))? as i32;
             write_le_i32(out, n);
         }
         "long" => {
-            let n = inner.as_i64().ok_or_else(|| anyhow!("long must be integer"))?;
+            let n = inner
+                .as_i64()
+                .ok_or_else(|| anyhow!("long must be integer"))?;
             write_le_i64(out, n);
         }
         "float" => {
-            let hex = inner.as_str().ok_or_else(|| anyhow!("float must be hex string"))?;
+            let hex = inner
+                .as_str()
+                .ok_or_else(|| anyhow!("float must be hex string"))?;
             let bits = u32::from_str_radix(hex, 16)?;
             write_le_i32(out, bits as i32);
         }
         "double" => {
-            let hex = inner.as_str().ok_or_else(|| anyhow!("double must be hex string"))?;
+            let hex = inner
+                .as_str()
+                .ok_or_else(|| anyhow!("double must be hex string"))?;
             let bits = u64::from_str_radix(hex, 16)?;
             write_le_i64(out, bits as i64);
         }
         "byte_array" => {
-            let b64 = inner.as_str().ok_or_else(|| anyhow!("byte_array must be base64 string"))?;
+            let b64 = inner
+                .as_str()
+                .ok_or_else(|| anyhow!("byte_array must be base64 string"))?;
             let bytes = B64.decode(b64)?;
             write_le_i32(out, bytes.len() as i32);
             out.extend_from_slice(&bytes);
         }
         "string" => {
-            let s = inner.as_str().ok_or_else(|| anyhow!("string must be a string"))?;
+            let s = inner
+                .as_str()
+                .ok_or_else(|| anyhow!("string must be a string"))?;
             write_string(out, s);
         }
         "list" => {
-            let list_obj = inner.as_object().ok_or_else(|| anyhow!("list value must be object"))?;
+            let list_obj = inner
+                .as_object()
+                .ok_or_else(|| anyhow!("list value must be object"))?;
             let elem_type_name = list_obj
                 .get("of")
                 .and_then(|v| v.as_str())
@@ -329,22 +362,33 @@ fn write_tagged_value(out: &mut Vec<u8>, val: &Value) -> Result<()> {
             }
         }
         "compound" => {
-            let fields = inner.as_object().ok_or_else(|| anyhow!("compound must be object"))?;
+            let fields = inner
+                .as_object()
+                .ok_or_else(|| anyhow!("compound must be object"))?;
             write_compound_payload(out, fields)?;
         }
         "int_array" => {
-            let items = inner.as_array().ok_or_else(|| anyhow!("int_array must be array"))?;
+            let items = inner
+                .as_array()
+                .ok_or_else(|| anyhow!("int_array must be array"))?;
             write_le_i32(out, items.len() as i32);
             for item in items {
-                let n = item.as_i64().ok_or_else(|| anyhow!("int_array element must be integer"))? as i32;
+                let n = item
+                    .as_i64()
+                    .ok_or_else(|| anyhow!("int_array element must be integer"))?
+                    as i32;
                 write_le_i32(out, n);
             }
         }
         "long_array" => {
-            let items = inner.as_array().ok_or_else(|| anyhow!("long_array must be array"))?;
+            let items = inner
+                .as_array()
+                .ok_or_else(|| anyhow!("long_array must be array"))?;
             write_le_i32(out, items.len() as i32);
             for item in items {
-                let n = item.as_i64().ok_or_else(|| anyhow!("long_array element must be integer"))?;
+                let n = item
+                    .as_i64()
+                    .ok_or_else(|| anyhow!("long_array element must be integer"))?;
                 write_le_i64(out, n);
             }
         }
@@ -378,8 +422,13 @@ fn write_compound_payload(out: &mut Vec<u8>, fields: &Map<String, Value>) -> Res
 }
 
 fn get_tag_type_id(val: &Value) -> Result<u8> {
-    let obj = val.as_object().ok_or_else(|| anyhow!("Expected tagged NBT object"))?;
-    let type_name = obj.keys().next().ok_or_else(|| anyhow!("Empty tagged NBT object"))?;
+    let obj = val
+        .as_object()
+        .ok_or_else(|| anyhow!("Expected tagged NBT object"))?;
+    let type_name = obj
+        .keys()
+        .next()
+        .ok_or_else(|| anyhow!("Empty tagged NBT object"))?;
     tag_type_id(type_name)
 }
 
@@ -402,7 +451,9 @@ pub fn read_raw_nbt(data: &[u8]) -> Result<Value> {
 
 /// Write a single NBT compound to raw bytes (no level.dat header).
 pub fn write_raw_nbt(value: &Value) -> Result<Vec<u8>> {
-    let fields = value.as_object().ok_or_else(|| anyhow!("Expected JSON object for raw NBT"))?;
+    let fields = value
+        .as_object()
+        .ok_or_else(|| anyhow!("Expected JSON object for raw NBT"))?;
     let mut out = Vec::new();
     write_u8(&mut out, 10);
     write_string(&mut out, "");
@@ -432,7 +483,9 @@ pub fn read_nbt_sequence(data: &[u8]) -> Result<Vec<Value>> {
 pub fn write_nbt_sequence(values: &[Value]) -> Result<Vec<u8>> {
     let mut out = Vec::new();
     for val in values {
-        let fields = val.as_object().ok_or_else(|| anyhow!("Expected JSON object in NBT sequence"))?;
+        let fields = val
+            .as_object()
+            .ok_or_else(|| anyhow!("Expected JSON object in NBT sequence"))?;
         write_u8(&mut out, 10);
         write_string(&mut out, "");
         write_compound_payload(&mut out, fields)?;

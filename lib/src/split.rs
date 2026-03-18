@@ -7,10 +7,10 @@ use rayon::prelude::*;
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
 
+use crate::ProgressEvent;
 use crate::keys::{BedrockKey, dim_dir, is_nbt_tag, is_scalar_tag, tag_name};
 use crate::ldb;
 use crate::nbt;
-use crate::ProgressEvent;
 
 pub fn split(world_path: &Path, out_path: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Result<()> {
     fs::create_dir_all(out_path).context("Failed to create output directory")?;
@@ -29,7 +29,11 @@ pub fn split(world_path: &Path, out_path: &Path, cb: &mut dyn FnMut(ProgressEven
 // ---------------------------------------------------------------------------
 
 fn split_plain_files(world: &Path, out: &Path) -> Result<()> {
-    for name in &["levelname.txt", "world_behavior_packs.json", "world_resource_packs.json"] {
+    for name in &[
+        "levelname.txt",
+        "world_behavior_packs.json",
+        "world_resource_packs.json",
+    ] {
         let src = world.join(name);
         if src.exists() {
             fs::copy(&src, out.join(name)).with_context(|| format!("Failed to copy {name}"))?;
@@ -41,8 +45,11 @@ fn split_plain_files(world: &Path, out: &Path) -> Result<()> {
 fn split_level_dat(world: &Path, out: &Path) -> Result<()> {
     let data = fs::read(world.join("level.dat")).context("Failed to read level.dat")?;
     let json = nbt::level_dat_to_json(&data).context("Failed to decode level.dat")?;
-    fs::write(out.join("level.dat.json"), serde_json::to_string_pretty(&json)?)
-        .context("Failed to write level.dat.json")
+    fs::write(
+        out.join("level.dat.json"),
+        serde_json::to_string_pretty(&json)?,
+    )
+    .context("Failed to write level.dat.json")
 }
 
 // ---------------------------------------------------------------------------
@@ -84,7 +91,9 @@ fn split_db(world: &Path, out: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Resu
     let mut seen_ids: std::collections::HashSet<Vec<u8>> = std::collections::HashSet::new();
 
     for ((x, z), ids) in &digp_map {
-        if ids.is_empty() { continue; }
+        if ids.is_empty() {
+            continue;
+        }
         let mut actors_map = serde_json::Map::new();
         for id in ids {
             seen_ids.insert(id.to_vec());
@@ -133,7 +142,13 @@ fn split_db(world: &Path, out: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Resu
         match BedrockKey::parse(raw_key) {
             BedrockKey::Actor(_) | BedrockKey::ActorDigp { .. } => {}
 
-            BedrockKey::Chunk { x, z, dim, tag, subchunk } => {
+            BedrockKey::Chunk {
+                x,
+                z,
+                dim,
+                tag,
+                subchunk,
+            } => {
                 let chunk = chunk_data.entry((x, z, dim)).or_default();
 
                 if tag == 47 {
@@ -143,7 +158,10 @@ fn split_db(world: &Path, out: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Resu
                         .or_insert_with(|| Value::Object(serde_json::Map::new()))
                         .as_object_mut()
                         .unwrap();
-                    subs.insert(subchunk.unwrap().to_string(), Value::String(hex_encode(value)));
+                    subs.insert(
+                        subchunk.unwrap().to_string(),
+                        Value::String(hex_encode(value)),
+                    );
                 } else if is_scalar_tag(tag) {
                     chunk.insert(tag_name(tag).to_string(), scalar_to_json(value));
                 } else if is_nbt_tag(tag) {
@@ -192,7 +210,8 @@ fn split_db(world: &Path, out: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Resu
     let mut created_dirs: HashSet<PathBuf> = HashSet::new();
     for (path, _) in &write_jobs {
         if let Some(dir) = path.parent()
-            && created_dirs.insert(dir.to_path_buf()) {
+            && created_dirs.insert(dir.to_path_buf())
+        {
             fs::create_dir_all(dir)?;
         }
     }
@@ -272,6 +291,12 @@ fn decode_named_to_json(name: &str, value: &[u8]) -> Value {
 
 fn safe_filename(name: &str) -> String {
     name.chars()
-        .map(|c| if matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { c })
+        .map(|c| {
+            if matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
+                '_'
+            } else {
+                c
+            }
+        })
         .collect()
 }

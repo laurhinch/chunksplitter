@@ -6,12 +6,16 @@ use serde_json::Value;
 
 use rayon::prelude::*;
 
+use crate::ProgressEvent;
 use crate::keys::{BedrockKey, is_nbt_tag, is_scalar_tag};
 use crate::ldb;
 use crate::nbt;
-use crate::ProgressEvent;
 
-pub fn merge(split_path: &Path, world_path: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Result<()> {
+pub fn merge(
+    split_path: &Path,
+    world_path: &Path,
+    cb: &mut dyn FnMut(ProgressEvent),
+) -> Result<()> {
     fs::create_dir_all(world_path).context("Failed to create world directory")?;
 
     cb(ProgressEvent::Phase("Copying files"));
@@ -28,7 +32,11 @@ pub fn merge(split_path: &Path, world_path: &Path, cb: &mut dyn FnMut(ProgressEv
 // ---------------------------------------------------------------------------
 
 fn merge_plain_files(split: &Path, world: &Path) -> Result<()> {
-    for name in &["levelname.txt", "world_behavior_packs.json", "world_resource_packs.json"] {
+    for name in &[
+        "levelname.txt",
+        "world_behavior_packs.json",
+        "world_resource_packs.json",
+    ] {
         let src = split.join(name);
         if src.exists() {
             fs::copy(&src, world.join(name)).with_context(|| format!("Failed to copy {name}"))?;
@@ -103,7 +111,8 @@ fn merge_db(split: &Path, world: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Re
         cb(ProgressEvent::Advance(1));
     }
 
-    db.flush().map_err(|e| anyhow::anyhow!("Failed to flush DB: {e}"))?;
+    db.flush()
+        .map_err(|e| anyhow::anyhow!("Failed to flush DB: {e}"))?;
     Ok(())
 }
 
@@ -111,7 +120,12 @@ fn merge_db(split: &Path, world: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Re
 // Chunk JSON → raw KV pairs
 // ---------------------------------------------------------------------------
 
-fn collect_chunk_pairs(abs_path: &Path, x: i32, z: i32, dim: i32) -> Result<Vec<(Vec<u8>, Vec<u8>)>> {
+fn collect_chunk_pairs(
+    abs_path: &Path,
+    x: i32,
+    z: i32,
+    dim: i32,
+) -> Result<Vec<(Vec<u8>, Vec<u8>)>> {
     let text = fs::read_to_string(abs_path)?;
     let map: serde_json::Map<String, Value> = serde_json::from_str(&text)?;
     let mut pairs = Vec::new();
@@ -128,18 +142,33 @@ fn collect_chunk_pairs(abs_path: &Path, x: i32, z: i32, dim: i32) -> Result<Vec<
                     let y: i8 = y_str
                         .parse()
                         .with_context(|| format!("Bad subchunk Y: {y_str}"))?;
-                    let key = BedrockKey::Chunk { x, z, dim, tag: 47, subchunk: Some(y) }
-                        .to_raw_bytes();
+                    let key = BedrockKey::Chunk {
+                        x,
+                        z,
+                        dim,
+                        tag: 47,
+                        subchunk: Some(y),
+                    }
+                    .to_raw_bytes();
                     let bytes = hex_decode(sub_val.as_str().unwrap_or(""))?;
                     pairs.push((key, bytes));
                 }
             }
             name => {
                 let tag = name_to_tag(name)?;
-                let key = BedrockKey::Chunk { x, z, dim, tag, subchunk: None }.to_raw_bytes();
+                let key = BedrockKey::Chunk {
+                    x,
+                    z,
+                    dim,
+                    tag,
+                    subchunk: None,
+                }
+                .to_raw_bytes();
 
                 if is_scalar_tag(tag) {
-                    let n = val.as_u64().with_context(|| format!("Bad scalar for {name}"))?;
+                    let n = val
+                        .as_u64()
+                        .with_context(|| format!("Bad scalar for {name}"))?;
                     pairs.push((key, scalar_to_bytes(n, tag)));
                 } else if is_nbt_tag(tag) {
                     let arr = val.as_array().cloned().unwrap_or_default();
@@ -198,7 +227,10 @@ fn collect_misc_pairs(abs_path: &Path, fname: &str) -> Result<Vec<(Vec<u8>, Vec<
             nbt::write_raw_nbt(&json)?
         };
 
-        pairs.push((BedrockKey::Named(stem.to_string()).to_raw_bytes(), raw_bytes));
+        pairs.push((
+            BedrockKey::Named(stem.to_string()).to_raw_bytes(),
+            raw_bytes,
+        ));
     }
 
     Ok(pairs)
@@ -268,7 +300,10 @@ fn dim_from_name(name: &str) -> i32 {
         "overworld" => 0,
         "nether" => 1,
         "the_end" => 2,
-        other => other.strip_prefix("dim_").and_then(|n| n.parse().ok()).unwrap_or(0),
+        other => other
+            .strip_prefix("dim_")
+            .and_then(|n| n.parse().ok())
+            .unwrap_or(0),
     }
 }
 
@@ -277,8 +312,12 @@ fn parse_chunk_dir(dir: &str) -> Result<(i32, i32)> {
         .find('_')
         .map(|i| i + 1)
         .with_context(|| format!("Invalid chunk name: {dir}"))?;
-    let x: i32 = dir[..sep].parse().with_context(|| format!("Bad x in {dir}"))?;
-    let z: i32 = dir[sep + 1..].parse().with_context(|| format!("Bad z in {dir}"))?;
+    let x: i32 = dir[..sep]
+        .parse()
+        .with_context(|| format!("Bad x in {dir}"))?;
+    let z: i32 = dir[sep + 1..]
+        .parse()
+        .with_context(|| format!("Bad z in {dir}"))?;
     Ok((x, z))
 }
 
