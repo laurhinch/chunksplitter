@@ -1,0 +1,22 @@
+[package]
+name = "chunksplitter-cli"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "CLI for splitting and merging Minecraft Bedrock Edition worlds for version control"
+repository = "https://github.com/laurhinch/chunksplitter"
+homepage = "https://github.com/laurhinch/chunksplitter"
+readme = "../README.md"
+keywords = ["minecraft", "bedrock", "leveldb", "vcs"]
+categories = ["game-development", "command-line-utilities"]
+
+[[bin]]
+name = "chunksplitter"
+path = "src/main.rs"
+
+[dependencies]
+# path is stripped when publishing; version is used instead
+chunksplitter = { path = "../lib", version = "0.1.0" }
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+indicatif = "0.17"

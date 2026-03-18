@@ -1,0 +1,4 @@
+/target
+
+# Temp directories created by verify_round_trip inside test_worlds
+test_worlds/**/.tmp*

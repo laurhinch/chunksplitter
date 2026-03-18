@@ -1,0 +1,31 @@
+[package]
+name = "chunksplitter"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Split and merge Minecraft Bedrock Edition worlds for version control"
+repository = "https://github.com/laurhinch/chunksplitter"
+homepage = "https://github.com/laurhinch/chunksplitter"
+documentation = "https://docs.rs/chunksplitter"
+readme = "../README.md"
+keywords = ["minecraft", "bedrock", "leveldb", "vcs"]
+categories = ["game-development", "command-line-utilities"]
+exclude = ["../test_worlds", "../test_world"]
+
+[dependencies]
+rusty-leveldb = "4"
+flate2 = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+anyhow = "1"
+base64 = "0.22"
+hex = "0.4"
+rayon = "1"
+tempfile = "3"
+
+[[test]]
+name = "round_trip"
+path = "tests/round_trip.rs"
+
+[dev-dependencies]
+tempfile = "3"

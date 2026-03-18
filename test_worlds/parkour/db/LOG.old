@@ -1,0 +1,4 @@
+Recovered manifest with next_file=800 manifest_num=799 log_num=797 prev_log_num=0 last_seq=75178
+reusing manifest "/home/lauren/repos/yharna/chunksplitter/lib/../test_worlds/parkour/db/MANIFEST-000795"
+Recovering log file "/home/lauren/repos/yharna/chunksplitter/test_worlds/parkour/db/000797.log"
+reusing log file "/home/lauren/repos/yharna/chunksplitter/test_worlds/parkour/db/000797.log"
