@@ -1,6 +1,6 @@
 [package]
 name = "chunksplitter-cli"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 license = "MIT"
 description = "CLI for splitting and merging Minecraft Bedrock Edition worlds for version control"
