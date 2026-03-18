@@ -80,6 +80,16 @@ let report = chunksplitter::verify_round_trip(Path::new("my_world"), &mut |_| {}
 println!("{} key-value pairs verified", report.pairs_checked);
 ```
 
+## Potential future improvements
+
+- **Incremental split/merge** — track a manifest of chunk content hashes and only re-process modified chunks. Large worlds are slow to fully re-split on every commit.
+- **Git merge driver** — a `chunksplitter merge-driver` command that attempts field-level merges when two branches edit the same chunk, registerable via `.gitattributes`.
+- **Richer actor/entity output** — decode common entity NBT fields (position, health, inventory) into human-readable top-level keys rather than raw NBT-tagged JSON.
+- **Streaming / reduced memory usage** — stream LevelDB iteration and write chunks as they are processed instead of loading the entire database into memory first.
+- **Deterministic orphan actor ordering** — sort orphan actors by ID so repeated splits of an unchanged world produce identical output.
+- **Graceful error recovery** — collect per-entry errors and continue rather than aborting the entire operation on the first bad key.
+- **Versioned test corpus** — a small set of real (or synthetic) world snapshots covering multiple Bedrock versions committed to the repo so the round-trip test runs in CI without external data.
+
 ## License
 
 Licensed under the [MIT](LICENSE.md) license.

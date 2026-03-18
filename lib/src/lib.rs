@@ -3,6 +3,7 @@ mod ldb;
 mod merge;
 mod nbt;
 mod split;
+mod subchunk;
 
 pub use merge::merge;
 pub use split::split;

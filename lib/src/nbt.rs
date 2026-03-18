@@ -440,12 +440,18 @@ fn get_tag_type_id(val: &Value) -> Result<u8> {
 /// The bytes begin directly with the tag type byte (0x0A), name, and payload.
 pub fn read_raw_nbt(data: &[u8]) -> Result<Value> {
     let mut cur = Cursor::new(data);
-    let tag_type = read_u8(&mut cur)?;
+    read_raw_nbt_cursor(&mut cur)
+}
+
+/// Read a single NBT compound from a cursor, advancing it past the compound.
+/// Used when reading palette entries sequentially from a subchunk blob.
+pub fn read_raw_nbt_cursor(cur: &mut Cursor<&[u8]>) -> Result<Value> {
+    let tag_type = read_u8(cur)?;
     if tag_type != 10 {
         bail!("Expected TAG_Compound (10) at start of raw NBT, got {tag_type}");
     }
-    let _name = read_string(&mut cur)?;
-    let fields = read_compound_payload(&mut cur)?;
+    let _name = read_string(cur)?;
+    let fields = read_compound_payload(cur)?;
     Ok(Value::Object(fields))
 }
 

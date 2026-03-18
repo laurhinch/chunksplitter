@@ -11,6 +11,7 @@ use crate::ProgressEvent;
 use crate::keys::{BedrockKey, dim_dir, is_nbt_tag, is_scalar_tag, tag_name};
 use crate::ldb;
 use crate::nbt;
+use crate::subchunk;
 
 pub fn split(world_path: &Path, out_path: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Result<()> {
     fs::create_dir_all(out_path).context("Failed to create output directory")?;
@@ -152,16 +153,16 @@ fn split_db(world: &Path, out: &Path, cb: &mut dyn FnMut(ProgressEvent)) -> Resu
                 let chunk = chunk_data.entry((x, z, dim)).or_default();
 
                 if tag == 47 {
-                    // Subchunk: store under "sub" keyed by Y index.
+                    // Subchunk: decode palette-based format, fall back to hex for
+                    // unknown versions.
                     let subs = chunk
                         .entry("sub".to_string())
                         .or_insert_with(|| Value::Object(serde_json::Map::new()))
                         .as_object_mut()
                         .unwrap();
-                    subs.insert(
-                        subchunk.unwrap().to_string(),
-                        Value::String(hex_encode(value)),
-                    );
+                    let decoded = subchunk::decode_subchunk(value)
+                        .unwrap_or_else(|_| Value::String(hex_encode(value)));
+                    subs.insert(subchunk.unwrap().to_string(), decoded);
                 } else if is_scalar_tag(tag) {
                     chunk.insert(tag_name(tag).to_string(), scalar_to_json(value));
                 } else if is_nbt_tag(tag) {

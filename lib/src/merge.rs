@@ -10,6 +10,7 @@ use crate::ProgressEvent;
 use crate::keys::{BedrockKey, is_nbt_tag, is_scalar_tag};
 use crate::ldb;
 use crate::nbt;
+use crate::subchunk;
 
 pub fn merge(
     split_path: &Path,
@@ -150,7 +151,14 @@ fn collect_chunk_pairs(
                         subchunk: Some(y),
                     }
                     .to_raw_bytes();
-                    let bytes = hex_decode(sub_val.as_str().unwrap_or(""))?;
+                    // Subchunks are stored as decoded JSON objects; legacy hex
+                    // strings are accepted for backwards compatibility.
+                    let bytes = if sub_val.is_string() {
+                        hex_decode(sub_val.as_str().unwrap_or(""))?
+                    } else {
+                        subchunk::encode_subchunk(sub_val)
+                            .with_context(|| format!("Failed to encode subchunk Y={y_str}"))?
+                    };
                     pairs.push((key, bytes));
                 }
             }
