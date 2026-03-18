@@ -82,13 +82,14 @@ println!("{} key-value pairs verified", report.pairs_checked);
 
 ## Potential future improvements
 
-- **Incremental split/merge** — track a manifest of chunk content hashes and only re-process modified chunks. Large worlds are slow to fully re-split on every commit.
-- **Git merge driver** — a `chunksplitter merge-driver` command that attempts field-level merges when two branches edit the same chunk, registerable via `.gitattributes`.
-- **Richer actor/entity output** — decode common entity NBT fields (position, health, inventory) into human-readable top-level keys rather than raw NBT-tagged JSON.
-- **Streaming / reduced memory usage** — stream LevelDB iteration and write chunks as they are processed instead of loading the entire database into memory first.
-- **Deterministic orphan actor ordering** — sort orphan actors by ID so repeated splits of an unchanged world produce identical output.
-- **Graceful error recovery** — collect per-entry errors and continue rather than aborting the entire operation on the first bad key.
-- **Versioned test corpus** — a small set of real (or synthetic) world snapshots covering multiple Bedrock versions committed to the repo so the round-trip test runs in CI without external data.
+- [x] **Subchunk decoding** - decode palette-based subchunk storage into readable JSON so block changes show up in diffs instead of hex blobs.
+- [ ] **Incremental split/merge** - track a manifest of chunk content hashes and only re-process modified chunks. Large worlds are slow to fully re-split on every commit.
+- [ ] **Git merge driver** - a `chunksplitter merge-driver` command for `.gitattributes` that attempts field-level merges when two branches edit the same chunk.
+- [ ] **Richer entity output** - decode common entity NBT fields (position, health, inventory) into plain keys rather than the raw NBT-tagged format.
+- [ ] **Streaming** - iterate LevelDB and write chunk files as they come in rather than buffering everything in memory at once.
+- [ ] **Deterministic orphan actor ordering** - sort orphan actors by ID so splitting the same unmodified world twice produces identical output.
+- [ ] **Graceful error recovery** - collect per-entry errors and keep going rather than aborting the whole operation on the first bad key.
+- [ ] **Test corpus in CI** - commit a small set of world snapshots covering multiple Bedrock versions so the round-trip test actually runs in CI.
 
 ## License
 
