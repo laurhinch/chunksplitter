@@ -2,7 +2,8 @@
 //!
 //! Binary layout (versions 8 and 9):
 //!   [version: u8]
-//!   [num_storages: u8]          -- version 9 only; version 8 always has one storage
+//!   [num_storages: u8]          -- present in both v8 and v9
+//!   [y_index: i8]               -- version 9 ONLY: Y-section index (e.g. -4..20 for 1.18+)
 //!   for each storage:
 //!     [bpb_byte: u8]            -- bits_per_block = bpb_byte >> 1; is_runtime = bpb_byte & 1
 //!     [words: u32 LE * n]       -- packed block indices (omitted when bits_per_block == 0)
@@ -73,8 +74,13 @@ pub fn encode_subchunk(json: &Value) -> Result<Vec<u8>> {
 
     let mut out = Vec::new();
     out.push(version);
+    out.push(layers.len() as u8);
     if version >= 9 {
-        out.push(layers.len() as u8);
+        let y_index = json
+            .get("y_index")
+            .and_then(|v| v.as_i64())
+            .ok_or_else(|| anyhow::anyhow!("v9 subchunk missing 'y_index'"))? as i8;
+        out.push(y_index as u8);
     }
     for layer in layers {
         encode_layer(&mut out, layer)?;
@@ -89,17 +95,27 @@ pub fn encode_subchunk(json: &Value) -> Result<Vec<u8>> {
 fn decode_palette(data: &[u8]) -> Result<Value> {
     let mut cur = Cursor::new(data);
     let version = read_u8(&mut cur)?;
-    let num_storages: usize = if version >= 9 {
-        read_u8(&mut cur)? as usize
+    let num_storages = read_u8(&mut cur)? as usize;
+
+    // Version 9 adds a y_index byte (signed, e.g. -4..20 for 1.18+ worlds).
+    let y_index: Option<i8> = if version >= 9 {
+        Some(read_u8(&mut cur)? as i8)
     } else {
-        1
+        None
     };
 
     let mut layers = Vec::with_capacity(num_storages);
     for _ in 0..num_storages {
         layers.push(decode_layer(&mut cur)?);
     }
-    Ok(json!({"version": version, "layers": layers}))
+
+    let mut obj = serde_json::Map::new();
+    obj.insert("version".into(), version.into());
+    if let Some(y) = y_index {
+        obj.insert("y_index".into(), (y as i64).into());
+    }
+    obj.insert("layers".into(), Value::Array(layers));
+    Ok(Value::Object(obj))
 }
 
 fn decode_layer(cur: &mut Cursor<&[u8]>) -> Result<Value> {
@@ -124,8 +140,8 @@ fn decode_layer(cur: &mut Cursor<&[u8]>) -> Result<Value> {
     };
 
     let palette_count = read_le_i32(cur)?;
-    if palette_count < 0 {
-        bail!("negative palette count: {palette_count}");
+    if !(0..=4096).contains(&palette_count) {
+        bail!("implausible palette count: {palette_count}");
     }
     let mut palette = Vec::with_capacity(palette_count as usize);
     for _ in 0..palette_count {
