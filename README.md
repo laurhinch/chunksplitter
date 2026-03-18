@@ -46,7 +46,7 @@ Or build from source:
 cargo install --path cli
 ```
 
-Pre-built binaries for Linux (x86\_64 / aarch64), macOS (Intel / Apple Silicon), and Windows are attached to each [GitHub release](https://github.com/laurhinch/chunksplitter/releases).
+Pre-built binaries for Linux (x86_64 / aarch64), macOS (Intel / Apple Silicon), and Windows are attached to each [GitHub release](https://github.com/laurhinch/chunksplitter/releases).
 
 ## Usage
 
@@ -82,4 +82,4 @@ println!("{} key-value pairs verified", report.pairs_checked);
 
 ## License
 
-Licensed under either of [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your choice.
+Licensed under the [MIT](LICENSE.md) license.
